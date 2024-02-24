@@ -22,7 +22,7 @@ import _ "net/http/pprof"
 However, if you want to just debug an existing program and don't want to have to recompile it to get profile data, you're out of luck.
 There is a [short little stanza](https://pkg.go.dev/runtime/pprof#hdr-Profiling_a_Go_program) you can add to your main function, which is nice, but that's just enough friction to pull me out of my "flow" state.
 I even tried to hack around this by writing a little library called [`mane`](https://github.com/jonjohnsonjr/mane/blob/main/README.md#pprof) to do it for me.
-Unfortunately, there's was still enough friction around calling `go get` and `go mod tidy` that it would disrupt my train of thought regardless.
+Unfortunately, there was enough friction around calling `go get` and `go mod tidy` that it would still disrupt my train of thought.
 
 Contrast that with just prepending `samply record` to your command.
 You don't have to add any code.
@@ -36,6 +36,10 @@ In order to contextualize the flamegraph, I'd have to instrument the binary with
 This allows you to visualize CPU usage over time (and across threads) which can show you where you might be able to parallelize things.
 Even more useful is the ability to select individual threads and slices of time in the profile.
 This gives you essentially a poor man's trace view, because you can drill down into sections of the profile and infer what's going on from the flamegraphs.
+
+For some example screenshots, check out [this issue](https://github.com/chainguard-dev/apko/issues/781) where I tracked progress on speeding up `apko`.
+At first, I just had traces, and you can see screenshots of [`otel-desktop-viewer`](https://github.com/CtrlSpice/otel-desktop-viewer) displaying them.
+I moved on to using `go tool pprof` to generate flamegraphs for a while, but towards the end you can see the Firefox Profiler UI that `samply` uses.
 
 ## Caveats
 
