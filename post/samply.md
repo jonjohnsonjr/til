@@ -22,7 +22,7 @@ import _ "net/http/pprof"
 However, if you want to just debug an existing program and don't want to have to recompile it to get profile data, you're out of luck.
 There is a [short little stanza](https://pkg.go.dev/runtime/pprof#hdr-Profiling_a_Go_program) you can add to your main function, which is nice, but that's just enough friction to pull me out of my "flow" state.
 I even tried to hack around this by writing a little library called [`mane`](https://github.com/jonjohnsonjr/mane/blob/main/README.md#pprof) to do it for me.
-Unfortunately, there's still enough friction around calling `go get` and `go mod tidy` that it would disrupt my train of thought.
+Unfortunately, there's was still enough friction around calling `go get` and `go mod tidy` that it would disrupt my train of thought regardless.
 
 Contrast that with just prepending `samply record` to your command.
 You don't have to add any code.
