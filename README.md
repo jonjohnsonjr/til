@@ -7,3 +7,4 @@ Basically, it's a blog.
 ## Index
 
 * [samply](./post/samply.md)
+* [otel](./post/otel.md)
