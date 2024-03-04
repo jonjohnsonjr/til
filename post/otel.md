@@ -160,7 +160,9 @@ melange build --trace ./trace.json && trot < ./trace.json > trace.html && open t
 No ports or docker containers, it just pops open a browser with my trace data.
 I can also easily emit traces anywhere and fetch that file to visualize locally without having to worry about configuration or hosted services, as long as I can persist files somewhere.
 
-## TODO
+## retrace
 
-I'd like to write a tool (probably called `retrace`) that can take `trace.json` and re-export it to whatever exporter you want.
-This would allow me to use `otel-desktop-viewer` without modifying most of my workflow.
+While I love the simplicity of `trot`, I often find myself wishing I could use a fully-featured trace viewer instead.
+For this purpose, I've developed another little tool called [`retrace`](https://github.com/jonjohnsonjr/retrace).
+Using `retrace`, you can re-export the `trace.json` via the http exporter, which means you can use `otel-desktop-viewer` to view traces without having to connect to it directly.
+This gives you the best of both worlds if you're willing to use my janky little tools.
