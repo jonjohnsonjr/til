@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -43,10 +42,26 @@ func run() error {
 		if len(roots) == 0 {
 			roots = []string{root}
 		}
-		var buf bytes.Buffer
-		todot(&buf, roots, deps, sped, vers)
 
-		if err := render(w, &buf); err != nil {
+		cmd := exec.Command("dot", "-Tsvg")
+		cmd.Stdout = w
+
+		in, err := cmd.StdinPipe()
+		if err != nil {
+			panic(err)
+		}
+
+		if err := cmd.Start(); err != nil {
+			fmt.Fprintf(w, "error: %v", err)
+		}
+
+		todot(in, roots, deps, sped, vers)
+
+		if err := in.Close(); err != nil {
+			panic(err)
+		}
+
+		if err := cmd.Wait(); err != nil {
 			fmt.Fprintf(w, "error: %v", err)
 		}
 	})
@@ -56,14 +71,6 @@ func run() error {
 	}
 
 	return server.Serve(l)
-}
-
-func render(w http.ResponseWriter, r io.Reader) error {
-	cmd := exec.Command("dot", "-Tsvg")
-	cmd.Stdin = r
-	cmd.Stdout = w
-
-	return cmd.Run()
 }
 
 func gomod() (string, map[string]map[string]struct{}, map[string]map[string]struct{}, map[string]string, error) {
