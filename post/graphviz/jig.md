@@ -22,7 +22,7 @@ I can show you how to make this style of jig, but the whole point of a jig is th
 
 For me, usually this kind of thing ends up as an unholy bash one-liner that lives mostly in my shell history.
 The shell is wonderful for this because it's designed to compose tools together interactively.
-That works for almost everything, but I haven't found any great way to visualize data in graphical and interactive way from my shell.
+That works for almost everything, but I haven't really found an interactive way to visualize data from my shell.
 (This is an invitation to tell me about your favorite tool for this kind of thing.)
 
 ## Intro
@@ -101,11 +101,11 @@ func render(w http.ResponseWriter, r io.Reader) error {
 ```
 
 This is a little bit weird, but bear with me.
-We're going to spin up an HTTP server that listens for requests and renders an graph as svg by shelling out to `dot`.
+We're going to spin up an HTTP server that listens for requests and renders the graph as an svg by shelling out to `dot`.
 This assumes that you have both `dot` and a browser on your local machine, which is generally true or easy to make true.
 I like to start with something like this because it gets your dev loop down to a reasonable latency without much fuss.
 
-This graph we generate should look like this:
+The graph we generate should look like this:
 
 <img src="./img/01.svg"></img>
 
@@ -152,7 +152,7 @@ func gomod() (map[string]map[string]struct{}, error) {
 }
 ```
 
-Then we'll write a very simple function that convers that map to `dot` format:
+Then we'll write a very simple function that converts that map to `dot` format:
 
 ```go
 func todot(w io.Writer, deps map[string]map[string]struct{}) {
@@ -219,7 +219,7 @@ Well that sucks.
 There is too much information to really see what's happening.
 This is where it pays off that we are using an actual programming language to generate these graphs -- we can apply whatever logic we want!
 
-So the most obvious thing to do here is to limit how much we display by only rendering a depth of 1 (this is also pretty east to implement).
+So the most obvious thing to do here is to limit how much we display by only rendering a depth of 1 (this is also pretty easy to implement).
 
 ```go
 
@@ -317,10 +317,10 @@ This will now only display direct dependencies of the root, but we throw away al
 
 ## Interactivity
 
+So let's bring all those nodes back.
+
 > [!IMPORTANT]  
 > This is the interesting part, pay attention.
-
-So let's bring all those nodes back.
 
 The big reveal here is that we can use the `href` property on a node to make it clickable.
 
@@ -374,6 +374,7 @@ func todot(w io.Writer, root string, deps map[string]map[string]struct{}) {
 }
 ```
 
+So each node has an `href` set to `?n=<node>`.
 Now the root node comes dynamically from the URL, so we can click through the graph to manually traverse the dependcy graph and only show what we care about.
 
 That's basically it.
@@ -400,7 +401,7 @@ Also, a single node's deps in isolation are useful when you have have all the co
 We have the current traversal in our browser history, but that's not very easy to visualize either.
 
 Let's make a small modification to how we generate links so we can render the traversal.
-Instead of setting the query string parameter, we are just going to append it.
+Instead of setting the query string parameter to a single value, we can put multiple `n` values in the `href` URL.
 Now the last element is our root, but we will render the path along to it.
 
 Let's look at a traversal from `go-containerregistry` down to `logrus` through `tar-split`.
@@ -432,19 +433,20 @@ There are a lot of other neat little tricks you can use to stretch graphviz pret
 
 ## Sharing is Caring
 
-At some point, you might realize that other people would benefit from this.
-Since this usually doesn't add many dependencies, it's not a huge deal to graft onto another tool, so I often just make it a `dot` subcommand of a more general tool with a `--web` flag for the interactive part.
+At some point, you might realize that other people would benefit from your jig.
+Since this technique usually doesn't add many dependencies, it's not a huge deal to graft it onto another tool, so I often just make it a `dot` subcommand of a more general tool with a `--web` flag for the interactive part.
+(Without the `--web` flag, I'll just print the dot to stdout, which you can use however you'd like.)
 
-You can also really easily just share an SVG with someone if they don't want to install a tool.
+You can also really easily share the dot or SVG output with someone if they don't want to install a tool.
 
-If you want to make this even more accessible, it's not hard to expose this as an actual service running on the internet (just spend some time hardening it first).
+If you want to make this even more accessible, it's not hard to expose this as an actual service running on the internet (just maybe spend some time hardening it first).
 
 ## Conclusion
 
-Using graphviz with embedded links is a really easy way to make an interactive data visualization tool.
+Generating graphviz with embedded links is a really easy way to make an interactive data visualization tool.
 
 Since graphviz is declarative, you don't have to worry about how anything is actually laid out.
-You also don't have to worry about javascript or HTML, since you graphviz generates an SVG and you can easily generate dot syntax is any language.
+You also don't have to worry about javascript or HTML, since you graphviz generates an SVG which browsers can handle natively.
 
 There's nothing particularly novel here -- graphviz is doing all the heavy lifting -- but I hope you find this technique useful for your own problems.
 
@@ -455,5 +457,5 @@ If you want to play with this yourself, run this:
 git clone https://github.com/jonjohnsonjr/til && cd til/post/graphviz/src/jig && go run .
 ```
 
-That should pop open a browser for you to click around the jig dependency graph.
-You can `go install` the `jig` tool and run it in any go repository to explore your own dependency graph.
+That should pop open a browser for you to click around jig's (very small) dependency graph.
+You can also `go install` the `jig` tool and run it in any go repository to explore your own dependency graph.
