@@ -43,6 +43,11 @@ func run() error {
 			roots = []string{root}
 		}
 
+		if _, err := exec.LookPath("dot"); err != nil {
+			fmt.Fprintf(w, "checking if dot is installed: %v", err)
+			return
+		}
+
 		cmd := exec.Command("dot", "-Tsvg")
 		cmd.Stdout = w
 
