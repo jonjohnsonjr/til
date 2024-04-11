@@ -375,7 +375,7 @@ func todot(w io.Writer, root string, deps map[string]map[string]struct{}) {
 ```
 
 So each node has an `href` set to `?n=<node>`.
-Now the root node comes dynamically from the URL, so we can click through the graph to manually traverse the dependcy graph and only show what we care about.
+Now the root node comes dynamically from the URL, so we can click through the graph to manually traverse the dependency graph and only show what we care about.
 
 That's basically it.
 Hopefully you have already thought about some domain specific modifications you could make to this to tailor it to your needs.
