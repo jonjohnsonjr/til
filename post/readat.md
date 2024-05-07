@@ -84,7 +84,7 @@ I've noticed a few patterns.
 `http.ServeContent` [seeks](https://cs.opensource.google/go/go/+/refs/tags/go1.22.2:src/net/http/fs.go;l=195-205;drc=1d45a7ef560a76318ed59dfdb178cecd58caf948) to the end of an `io.ReadSeeker` to determine its size.
 This feels like a pretty janky use of `Seek`, but since there's not any `io.Sizer` interface, I get it.
 
-`http.ServeConent` also [seeks](https://cs.opensource.google/go/go/+/refs/tags/go1.22.2:src/net/http/fs.go;l=239-247;drc=1d45a7ef560a76318ed59dfdb178cecd58caf948) back to the start after "sniffing" the first 512 bytes of data to try to automatically a `Content-Type`.
+`http.ServeContent` also [seeks](https://cs.opensource.google/go/go/+/refs/tags/go1.22.2:src/net/http/fs.go;l=239-247;drc=1d45a7ef560a76318ed59dfdb178cecd58caf948) back to the start after "sniffing" the first 512 bytes of data to try to automatically a `Content-Type`.
 Personally, I think it would be cleaner to `Peek` those bytes, but I assume that this was done because we already needed an `io.Seeker` for the size hack and to avoid an additional allocation.
 
 I guess my assertion at the beginning that `io.ReaderAt` is more powerful is not universally true.
