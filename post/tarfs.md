@@ -267,6 +267,40 @@ For this reason, in the general case, you should read through the entire tar fil
 
 There are definitely situations where you know the layout of a tar file ahead of time (e.g. an APK package) where you know you can stop reading when you get to the first matching file, but a general purpose tar library can't make that assumption.
 
+## Performance
+
+To compare these approaches, I've summoned a random tar file from Docker Hub:
+
+```
+crane export ubuntu@sha256:9c704ecd0c694c4cbdd85e589ac8d1fc3fd8f890b7f3731769a5b169eb495809 > ubuntu.tar
+```
+
+And I've written three methods for accessing tar files:
+
+1. `untar` which writes everything to a temporary directory, then deletes it afterwards,
+2. `tarfs` which uses the `tarfs` package, and
+3. `scantar` which re-scans through to access each file.
+
+The dumb benchmark I have here is to read three files and write them to stdout.
+
+```
+untar < ubuntu.tar  0.04s user 0.54s system 98% cpu 0.588 total
+tarfs < ubuntu.tar  0.02s user 0.01s system 97% cpu 0.028 total
+scantar < ubuntu.tar  0.02s user 0.01s system 93% cpu 0.033 total
+```
+
+You can see that `untar` is the slowest because it has to actually write everything out to disk and also clean it up.
+
+Since `tarfs` and `scantar` are read-only operations, they are both super fast.
+We can cheat a little bit to give tarfs an advantage by looking at a bunch of files that are near the end of the tar file.
+
+```
+tarfs < ubuntu.tar  0.02s user 0.01s system 94% cpu 0.035 total
+scantar < ubuntu.tar  0.08s user 0.05s system 98% cpu 0.128 total
+```
+
+We can see that `tarfs` is basically unaffected, whereas `scantar` is much slower because it's reading through almost the whole tar file for every file access.
+
 ## Disclaimer
 
 I wouldn't attempt to put `tarfs` into production quite yet, but eventually I will extract it from its experimental home under [targz](https://github.com/jonjohnsonjr/targz).
