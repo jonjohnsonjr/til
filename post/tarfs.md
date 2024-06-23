@@ -22,13 +22,15 @@ After the end of each file, there is zero padding until the next 512-byte bounda
 
 After the last file, there are (at least) two 512 byte blocks of zeros that indicate the End Of Archive (EOA).
 
+<!--
 ```dot
 digraph G {
-    newrank=true;
-    
     tar [shape="record", label="{header|content|header|content|...|EOA}"];
 }
 ```
+-->
+
+[![tar](./tarfs/tar.svg)](./tarfs/tar.svg)
 
 This format is easy to both produce and consume in a streaming manner, which means it's amenable to bash one-liners, which probably explains its ubiquity. 
 
@@ -149,8 +151,9 @@ There are a couple strategies here.
 The most obvious thing to do is untar the entire thing and access it through the normal filesystem.
 
 [Docker](https://github.com/moby/moby/blob/d1273b2b4a1fa511890035fbf75d299f345c5aaa/image/tarexport/load.go#L33) does this, but it's a lot more complicated than you might expect.
+It involves chroots, unshare, re-execing itself, unix pipes, and a bunch of additional complexity to convince the go runtime to play nicely with all of that.
 
-There's also file metadata within the tar that you may or may not want to preserve (like permissions, ownership, access times) which has security implications.
+There's also file metadata within the tar that you may or may not want to preserve like permissions, ownership, access times, and xattrs (which dictate capabilities), all of which have security implications.
 
 From [comments on their implementation](https://github.com/moby/moby/blob/d1273b2b4a1fa511890035fbf75d299f345c5aaa/pkg/chrootarchive/archive_unix.go#L52-L53):
 
@@ -186,25 +189,130 @@ This is a little slow, but it's actually a requirement for correctness, and it c
 
 The index would look something like this:
 
+<!--
 ```dot
 digraph G {
-    newrank=true;
-    
-    tar [shape="record", label="{{header|offset}|{header|offset}|...}"];
+    idx [shape="record", label="{{header|offset}|{header|offset}|...}"];
 }
 ```
+-->
+
+[![index](./tarfs/index.svg)](./tarfs/index.svg)
+
 
 Notice that this would only be 520 bytes per file instead of the entire file size, so it's relatively small.
 Also, given that headers are pretty similar, this index should compress very well.
 There is probably a much more compact format we could store these things in, but it's nice to have the identical data.
 
-Separately, we'd have an in-memory mapping of filename to the index entry to give us random access to any file metadata.
-In theory, we could store offsets to the header data so we don't store it twice, but by duplicating the header data, we can render the entire filesystem from just the index without actually having access to the original tar file.
-This technique is useful to me for quickly rendering results on dag.dev.
+In theory, we could store only the offsets to the header data in the original tar file so that we don't store it twice, but by duplicating the header data, we can render the entire filesystem from just the index without actually having access to the original tar file.
+This technique is useful to me for quickly rendering results on dag.dev, since I can just store the indexes locally and render the filesystem view without hitting the registry.
+
+Separately, we have an in-memory mapping of filename to the index entry to give us random access to any file metadata.
+This is just a `map[string]int` that gives us the array index of the file entry in the index described above.
+
+<!--
+digraph G {
+    names [shape="record", label="{{name|index}|{name|index}|{name|index}|...}"];
+}
+-->
+
+[![names](./tarfs/names.svg)](./tarfs/names.svg)
+
+With this structure, every `tarfs.FS.Open()` is just two map accesses, and every `Read()` is just a single `ReadAt()` call on the underlying `os.File`.
+
+Also, because I know that ~all my workloads end up immediately calling `fs.WalkDir` on the result, as part of the indexing I generate a pre-sorted `map[string][]fs.DirEntry` so that calling `ReadDir` doesn't have to allocate.
+
+<!--
+digraph G {
+    names [shape="record", label="{{dir|{file|file}}|{dir|{file}}|{dir|{file|file|file}}|...}"];
+}
+-->
+
+[![dirs](./tarfs/dirs.svg)](./tarfs/dirs.svg)
+
+For the stateless `FS.ReadDir` method, we just return the whole `[]fs.DirEntry` as-is, and for the stateful `File.ReadDir` method, we just return a slice of the requested size and maintain a cursor for the given position.
+Somewhat unexpectedly, implementing this part was the most difficult part for me when I was trying to get `tarfs` to pass `fstest.TestFS`.
 
 The star of the show here is really [`io.ReaderAt`](./readat.md), which enables concurrent and efficient access to the bytes of the underlying tar file.
+This will be even more apparent if I ever write about how this [composes](https://github.com/jonjohnsonjr/targz/blob/main/README.md#targz) with `gsip` and Range requests.
+
+### Performance
+
+To compare these approaches, I've summoned a random tar file from Docker Hub:
+
+```
+crane blob ubuntu@sha256:9c704ecd0c694c4cbdd85e589ac8d1fc3fd8f890b7f3731769a5b169eb495809 | gunzip > ubuntu.tar
+```
+
+Let's get a general sense of its properties:
+
+```
+$ wc -c ubuntu.tar
+ 80559104 ubuntu.tar # 80.6MB
+
+$ tarp < ubuntu.tar | jq '.Typeflag' | sort | uniq -c
+2579 48 # Regular files
+   2 49 # Hardlinks
+ 197 50 # Symlinks
+ 658 53 # Directories
+
+$ tarp < ubuntu.tar | jq 'select(.Typeflag == 48) | .Size' | jq -s 'add'
+78046512 # 78.0MB of regular file data
+```
+
+I've written three methods for accessing tar files:
+
+1. `untar` which writes everything to a temporary directory, then deletes it afterwards,
+2. `tarfs` which uses the `tarfs` package, and
+3. `scantar` which re-scans through to access each file.
+
+The dumb benchmark I have here is to read three files and write them to stdout.
+
+```
+untar < ubuntu.tar  0.04s user 0.54s system 98% cpu 0.588 total
+tarfs < ubuntu.tar  0.02s user 0.01s system 97% cpu 0.028 total
+scantar < ubuntu.tar  0.02s user 0.01s system 93% cpu 0.033 total
+```
+
+You can see that `untar` is the slowest because it has to actually write everything out to disk and also clean it up.
+
+Since `tarfs` and `scantar` are read-only operations, they are both super fast.
+We can cheat a little bit to give tarfs an advantage by looking at a bunch of files that are near the end of the tar file.
+
+```
+tarfs < ubuntu.tar  0.02s user 0.01s system 94% cpu 0.035 total
+scantar < ubuntu.tar  0.08s user 0.05s system 98% cpu 0.128 total
+```
+
+We can see that `tarfs` is basically unaffected, whereas `scantar` is much slower because it's reading through almost the whole tar file for every file access.
+
+A more realistic use case might be walking to `Walk` every file in the tar, so I did that to compare `tarfs` and `untar`, generating this graph:
+
+[![tarfs vs untar](./tarfs/latency.png)](./tarfs/latency.png)
+
+The Y axis is in microseconds, the X axis is mostly each file being accessed, but I also added a data point for the RemoveAll for `untar` at the end.
+
+Why does it look like this?
+
+With `tarfs`, we have a single `open` syscall, then the initial scan through to generate the index takes a bunch of `read` syscalls, then "walking" the filesystem is entirely in userspace.
+Reading each individual file is also exlusively `pread` syscalls.
+You can see the overall time spent is almost evenly split between the initial scan and the subsequent accesses.
+Indexing the tar takes ~26 milliseconds, then reading all the files takes another ~17ms.
+This makes sense, because indexing has to read through every byte and parse the tar headers, whereas we are reading only the file data portions when we walk the filesystem.
+
+With `untar`, not only do we have to `open`, `write`, and `close` (and sometimes `mkdir`) each file during the initial untar.
+We also have to `open`, `read`, and `close` each file during the subsequent accesses, so we have ~3x the overhead just for reading each file.
+We have to call `getdirentries` to then walk the filesystem, and finally the tmpdir cleanup requires `unlinkat` syscalls for each file.
+Untarring everything takes ~360ms, then reading all the files takes ~100ms, then cleanup takes ~230ms.
+Less than 15% of the execution time is spent actually accessing the data.
+
+Note that I'm not showing the `scantar` results here because we don't have a way to Walk the filesystem without some preprocessing.
+In cases where your workload is actually this contrived, the existing `tar.Reader` API is probably fine for you, and you would expect this to take about as long as `tarfs` takes to index the tar file (~26ms).
+
 
 ## When not to use tarfs
+
+### Sometimes `tar.Reader` is fine
 
 There are two scenarios where you might just want to use the plain tar package and not `tarfs`.
 
@@ -213,9 +321,10 @@ There are two scenarios where you might just want to use the plain tar package a
 
 If you find yourself in the second secnario, you should be careful.
 It is not generally correct to assume that the first matching entry in a tar file is what you want to extract because tar files may contain duplicate entries.
+
 Let me explain.
 
-### Last write wins
+#### Last write wins
 
 First, let's create a tar file with a single entry:
 
@@ -267,39 +376,13 @@ For this reason, in the general case, you should read through the entire tar fil
 
 There are definitely situations where you know the layout of a tar file ahead of time (e.g. an APK package) where you know you can stop reading when you get to the first matching file, but a general purpose tar library can't make that assumption.
 
-## Performance
+### You want to Open() Symlinks and Hardlinks
 
-To compare these approaches, I've summoned a random tar file from Docker Hub:
+Right now `io/fs` is [kind of weird about symlinks](https://github.com/golang/go/issues/49580), and I'm waiting for all of that to shake out before I commit to anything in particular.
 
-```
-crane export ubuntu@sha256:9c704ecd0c694c4cbdd85e589ac8d1fc3fd8f890b7f3731769a5b169eb495809 > ubuntu.tar
-```
-
-And I've written three methods for accessing tar files:
-
-1. `untar` which writes everything to a temporary directory, then deletes it afterwards,
-2. `tarfs` which uses the `tarfs` package, and
-3. `scantar` which re-scans through to access each file.
-
-The dumb benchmark I have here is to read three files and write them to stdout.
-
-```
-untar < ubuntu.tar  0.04s user 0.54s system 98% cpu 0.588 total
-tarfs < ubuntu.tar  0.02s user 0.01s system 97% cpu 0.028 total
-scantar < ubuntu.tar  0.02s user 0.01s system 93% cpu 0.033 total
-```
-
-You can see that `untar` is the slowest because it has to actually write everything out to disk and also clean it up.
-
-Since `tarfs` and `scantar` are read-only operations, they are both super fast.
-We can cheat a little bit to give tarfs an advantage by looking at a bunch of files that are near the end of the tar file.
-
-```
-tarfs < ubuntu.tar  0.02s user 0.01s system 94% cpu 0.035 total
-scantar < ubuntu.tar  0.08s user 0.05s system 98% cpu 0.128 total
-```
-
-We can see that `tarfs` is basically unaffected, whereas `scantar` is much slower because it's reading through almost the whole tar file for every file access.
+In most of my uses of `tarfs`, I actually don't want to `Open()` symlinks or hardlinks because I want to preserve them in the ouput archives I'm producing.
+There's a `Sys` method on `fs.FileInfo` that I use to return the original `*tar.Header`, which is what I use in practice for handling these things.
+This is one place where the performance stuff above is a little misleading, but there are only two hardlinks in the entire archive, so it's not significant enough to affect the results.
 
 ## Disclaimer
 

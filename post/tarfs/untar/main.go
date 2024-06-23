@@ -2,10 +2,13 @@ package main
 
 import (
 	"archive/tar"
+	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 func main() {
@@ -15,6 +18,16 @@ func main() {
 }
 
 func run() error {
+	fmt.Println("untar")
+
+	timings := make([]time.Duration, 0, 3000)
+	start := time.Now()
+
+	defer func() {
+		// Account for cleanup time.
+		fmt.Println(time.Since(start).Microseconds())
+	}()
+
 	tmpdir, err := os.MkdirTemp("", "untar")
 	if err != nil {
 		return err
@@ -25,16 +38,27 @@ func run() error {
 		return err
 	}
 
-	for _, needle := range []string{"usr/lib/os-release", "var/lib/dpkg/triggers/lib32", "etc/hostname"} {
-		f, err := os.Open(filepath.Join(tmpdir, needle))
-		if err != nil {
-			return err
-		}
-		defer f.Close()
+	if err := filepath.WalkDir(tmpdir, func(name string, d fs.DirEntry, err error) error {
+		if d.Type().IsRegular() {
+			f, err := os.Open(name)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
 
-		if _, err := io.Copy(os.Stdout, f); err != nil {
-			return err
+			if _, err := io.Copy(io.Discard, f); err != nil {
+				return err
+			}
+			timings = append(timings, time.Since(start))
 		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	for _, t := range timings {
+		fmt.Println(t.Microseconds())
 	}
 
 	return nil

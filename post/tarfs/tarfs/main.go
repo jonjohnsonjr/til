@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"os"
+	"time"
 
 	"github.com/jonjohnsonjr/targz/tarfs"
 )
@@ -25,6 +28,11 @@ func main() {
 }
 
 func run() error {
+	fmt.Println("tarfs")
+
+	timings := make([]time.Duration, 0, 3000)
+	start := time.Now()
+
 	stat, err := os.Stdin.Stat()
 	if err != nil {
 		return err
@@ -35,17 +43,27 @@ func run() error {
 		return err
 	}
 
-	// for _, needle := range []string{"usr/lib/os-release", "var/lib/dpkg/triggers/lib32", "etc/hostname"} {
-	for _, needle := range nearTheEnd {
-		f, err := fsys.Open(needle)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
+	if err := fs.WalkDir(fsys, ".", func(name string, d fs.DirEntry, err error) error {
+		if d.Type().IsRegular() {
+			f, err := fsys.Open(name)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
 
-		if _, err := io.Copy(os.Stdout, f); err != nil {
-			return err
+			if _, err := io.Copy(io.Discard, f); err != nil {
+				return err
+			}
+			timings = append(timings, time.Since(start))
 		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	for _, t := range timings {
+		fmt.Println(t.Microseconds())
 	}
 
 	return nil
