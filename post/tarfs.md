@@ -384,6 +384,8 @@ In most of my uses of `tarfs`, I actually don't want to `Open()` symlinks or har
 There's a `Sys` method on `fs.FileInfo` that I use to return the original `*tar.Header`, which is what I use in practice for handling these things.
 This is one place where the performance stuff above is a little misleading, but there are only two hardlinks in the entire archive, so it's not significant enough to affect the results.
 
+(Since the time of writing, I've added symlink chasing to `tarfs`, but I don't care to update the rest of this post.)
+
 ## Disclaimer
 
 I wouldn't attempt to put `tarfs` into production quite yet, but eventually I will extract it from its experimental home under [targz](https://github.com/jonjohnsonjr/targz).
