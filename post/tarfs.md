@@ -16,7 +16,7 @@ Tape drives are relatively slow, and archives imply that they aren't meant for o
 
 There are several flavors of tar, but let's ignore that for now and focus on a simplified model of the format.
 
-A tar file is a just a of records that alternate between a 512-byte header and the actual file contents.
+A tar file is a just a series of records that alternate between a 512-byte header and the actual file contents (if there are any).
 The header contains metadata for the next file, including its name and size, which tells you how many bytes to read after the header.
 After the end of each file, there is zero padding until the next 512-byte boundary.
 
