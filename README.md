@@ -10,4 +10,5 @@ Basically, it's a blog.
 * [otel](./post/otel.md)
 * graphviz
     * [jig](./post/graphviz/jig.md)
+* [readat](./post/readat.md)
 * [tarfs](./post/tarfs.md)

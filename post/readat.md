@@ -234,6 +234,9 @@ See this unfortunate pair of issues for more context:
 * https://github.com/golang/go/issues/15818
 * https://github.com/golang/go/issues/15822
 
+In most cases, you can just call [`Stat`](https://pkg.go.dev/os#Stat), [`Stat`](https://pkg.go.dev/os#File.Stat), [`Stat`](https://pkg.go.dev/io/fs#Stat), or [`Stat`](https://pkg.go.dev/io/fs#File.Stat) to get the size.
+Oh and don't forget about [`ContentLength`](https://pkg.go.dev/net/http#Response.ContentLength) to get the size of a different computer's files.
+
 ## Even More Reading
 
 * While writing this, I came across https://fasterthanli.me/articles/abstracting-away-correctness, which covers a lot of the same ground but with much higher production value.
