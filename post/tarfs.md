@@ -171,7 +171,7 @@ Let's look at a different approach to the same problem.
 
 This is in go-containerregistry, which means I'm at least partially responsible for it, so it's fair game to disparage.
 
-Rather than untarring the entire thing to disk to give us random access, we can instead just re-open the tar file and read through it again until we find what we're looking for.
+Rather than untarring the entire thing to disk to give us random access, we can instead just [re-open the tar file and read through it again](https://github.com/google/go-containerregistry/blob/1b4e4078a545f2b6f96766a064b45ee77cdbefdd/pkg/v1/tarball/image.go#L221-L255) until we find what we're looking for.
 [This ends up being pretty slow](https://en.wikichip.org/wiki/schlemiel_the_painter%27s_algorithm), but it also avoid all the complexity and safety concerns of untarring it to disk.
 
 ## A better way
