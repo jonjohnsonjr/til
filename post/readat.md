@@ -92,6 +92,74 @@ You can't (cheaply) use an `io.ReaderAt` to determine the size of something.
 I don't think this is a great use of `io.Seeker`, but it's used in the standard library, so what do I know?
 (Maybe I do know things, given https://github.com/golang/go/issues/25854.)
 
+Aside: Xe has an [excellent post](https://xeiaso.net/blog/2024/fixing-rss-mailcap/) about `http.ServeContent` doing this, and the unfortunate consequences.
+
+FWIW, if you know the size and are willing to buffer 512 bytes, I have dealt with this existential torment in the past using something like this:
+
+<details><summary>(click to expand)</summary>
+
+```go
+// golang/src/net/http/sniff.go
+const sniffLen = 512
+
+type sizeAndSniff struct {
+	r      io.Reader
+	size   int64
+	buf    *bufio.Reader
+	seeked bool
+}
+
+func (s *sizeAndSniff) Seek(offset int64, whence int) (int64, error) {
+	s.seeked = true
+
+	// Checking the size.
+	if offset == 0 && whence == io.SeekEnd {
+		return s.size, nil
+	}
+
+	// Resetting.
+	if offset == 0 && whence == io.SeekStart {
+		return 0, nil
+	}
+
+	// Anything else is unexpected.
+	return 0, fmt.Errorf("unexpected seek(%d, %d) for sizeAndSniff", offset, whence)
+}
+
+func (s *sizeAndSniff) Read(p []byte) (int, error) {
+	// Handle first read.
+	if s.buf == nil {
+		if len(p) <= sniffLen {
+			s.buf = bufio.NewReaderSize(s.r, sniffLen)
+		} else {
+			s.buf = bufio.NewReaderSize(s.r, len(p))
+		}
+
+		// Currently, http.ServeContent will sniff before it seeks for size.
+		// If we haven't seen a Read() but have seen a Seek already, that means we shouldn't peek.
+		if !s.seeked {
+			// Peek to handle the first content sniff.
+			b, err := s.buf.Peek(len(p))
+			if err != nil {
+				if err == io.EOF {
+					n, _ := bytes.NewReader(b).Read(p)
+					return n, io.EOF
+				} else {
+					return 0, err
+				}
+			}
+			return bytes.NewReader(b).Read(p)
+		}
+	}
+
+	// This assumes they will always sniff then reset.
+	n, err := s.buf.Read(p)
+	return n, err
+}
+```
+
+</details>
+
 ## Applications
 
 ### `targz`
