@@ -73,8 +73,8 @@ These are file formats that deal a lot with offsets to binary data.
 
 Because `zip.NewReader` takes an `io.ReaderAt` instead of an `io.ReadSeeker`, we can safely open and read multiple files in the zip archive without worrying about any synchronization.
 
-However, just because the standard library doesn't use `io.ReaderAt` much doesn't mean that you can't!
-The whole point of this point is to encourage you to exploit the power of `io.ReaderAt` in your own code.
+Anyway, just because the standard library doesn't use `io.ReaderAt` much doesn't mean that you can't!
+The whole point of this post is to encourage you to exploit the power of `io.ReaderAt` in your own code.
 
 ### Why `io.ReadSeeker`, then?
 
@@ -84,7 +84,7 @@ I've noticed a few patterns.
 `http.ServeContent` [seeks](https://cs.opensource.google/go/go/+/refs/tags/go1.22.2:src/net/http/fs.go;l=195-205;drc=1d45a7ef560a76318ed59dfdb178cecd58caf948) to the end of an `io.ReadSeeker` to determine its size.
 This feels like a pretty janky use of `Seek`, but since there's not any `io.Sizer` interface, I get it.
 
-`http.ServeContent` also [seeks](https://cs.opensource.google/go/go/+/refs/tags/go1.22.2:src/net/http/fs.go;l=239-247;drc=1d45a7ef560a76318ed59dfdb178cecd58caf948) back to the start after "sniffing" the first 512 bytes of data to try to automatically a `Content-Type`.
+`http.ServeContent` also [seeks](https://cs.opensource.google/go/go/+/refs/tags/go1.22.2:src/net/http/fs.go;l=239-247;drc=1d45a7ef560a76318ed59dfdb178cecd58caf948) back to the start after "sniffing" the first 512 bytes of data to try to automatically detect a `Content-Type`.
 Personally, I think it would be cleaner to `Peek` those bytes, but I assume that this was done because we already needed an `io.Seeker` for the size hack and to avoid an additional allocation.
 
 I guess my assertion at the beginning that `io.ReaderAt` is more powerful is not universally true.
