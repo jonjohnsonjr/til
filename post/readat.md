@@ -63,7 +63,7 @@ This lets you bridge an `io.ReaderAt` into any API that expects an `io.Reader`.
 ### Why `io.ReaderAt`, then?
 
 Okay, sure, fair.
-There's not a ton of packages in the standard library that takes advantage of an `io.ReaderAt`.
+There's not a ton of packages in the standard library that take advantage of an `io.ReaderAt`.
 The only ones I've really used are:
 
 * archive/zip
@@ -197,7 +197,7 @@ But then I had another realization: this was only true because I had not yet ach
 
 I've come across the ["Useless Use Of Cat"](https://en.wikipedia.org/wiki/Cat_(Unix)#Useless_use_of_cat) internet meme a few times in my life, and I've always dismissed it because, really, who cares?
 
-To summarize, internet pedants will often point out that `cat file | cmd` is less efficient than `cmd < file` because the former creates an extra process and pipe.
+To summarize: internet pedants will often point out that `cat file | cmd` is less efficient than `cmd < file` because the former creates an extra process and pipe.
 I've always thought this was a silly thing to care about.
 A process and a pipe are cheap, and I find it easier to reason about catting the file as starting the pipeline than having `< file` come _after_ the command.
 
@@ -278,7 +278,7 @@ if _, err := f.Seek(0, io.SeekCurrent); err != nil {
     }
     defer os.Remove(tmp.Name())
 
-    if _, err := os.Copy(tmp, f); err != nil {
+    if _, err := io.Copy(tmp, f); err != nil {
         return err
     }
 
