@@ -1,5 +1,7 @@
 # ReadAt
 
+TODO: Explain ReadFull.
+
 For a long while, I've been confused about something in go's standard library.
 There's [`io.ReaderAt`](https://pkg.go.dev/io#ReaderAt), [`io.ReadSeeker`](https://pkg.go.dev/io#ReadSeeker), and [`io.SectionReader`](https://pkg.go.dev/io#SectionReader).
 Some APIs expect an `io.ReaderAt`, but others take an `io.ReadSeeker`.
@@ -168,6 +170,19 @@ This post was inspired by some work I'm been tinkering with over in https://gith
 I'll have more to say about that once it's a little more fleshed out, but it's usable enough to demonstrate some of the concepts I've been talking about.
 
 ## Implications
+
+### Implementation
+
+If you've seen the light and want to implement an `io.ReaderAt`, there's something that's easy to miss, from the [godoc comments on `io.ReaderAt`](https://pkg.go.dev/io#ReaderAt) (emphasis mine):
+
+> When ReadAt returns n < len(p), it returns a non-nil error explaining why more bytes were not returned. In this respect, **ReadAt is stricter than Read**.
+
+Compare this to [`io.Reader`](https://pkg.go.dev/io#Reader):
+
+> If some data is available but not len(p) bytes, Read conventionally returns what is available instead of waiting for more.
+
+If you try to just use a single `Read()` to implement `ReadAt()`, you'll end up with an incomplete implementation because `io.Reader`s are allowed to return fewer bytes than requested.
+The solution to this is to use [`io.ReadFull`](https://pkg.go.dev/io#ReadFull) to satisfy the contract of `io.ReaderAt`.
 
 ### CLI Design
 
