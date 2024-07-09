@@ -1,7 +1,5 @@
 # ReadAt
 
-TODO: Explain ReadFull.
-
 For a long while, I've been confused about something in go's standard library.
 There's [`io.ReaderAt`](https://pkg.go.dev/io#ReaderAt), [`io.ReadSeeker`](https://pkg.go.dev/io#ReadSeeker), and [`io.SectionReader`](https://pkg.go.dev/io#SectionReader).
 Some APIs expect an `io.ReaderAt`, but others take an `io.ReadSeeker`.
