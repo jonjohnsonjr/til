@@ -251,9 +251,9 @@ The fourth variant divides each offset by 512 before storing it, which dropped t
 If I were less lazy I'd try binary encodings instead of JSON.
 Maybe later.
 
-Okay I went back and did a 1.5 version that still does array of structs but with a `[]byte` Typeflag instead of the whole `tar.Header`.
+Okay I went back and did a 1.5 version that still does array of structs but with a `byte` Typeflag instead of the whole `tar.Header`.
 
-That dropped the uncompressed size a whole lot to 29K and the compressed size to 35K.
+That dropped the uncompressed size a whole lot to 289K and the compressed size to 35K.
 
 ```
 287852 ubuntu.index5
