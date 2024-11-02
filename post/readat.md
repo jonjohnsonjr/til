@@ -265,18 +265,12 @@ You'll get an error like this:
 read /dev/stdin: illegal seek
 ```
 
-We can determine if `os.Stdin` actually implements `io.ReaderAt` but attempting to seeK:
+We can determine if `os.Stdin` actually implements `io.ReaderAt` by attempting to seek:
 
 ```go
 if _, err := os.Stdin.Seek(0, io.SeekCurrent); err != nil {
     // DON'T BELIEVE HIS LIES
 }
-```
-
-If we're reading from a pipe, we'll get an error like this:
-
-```
-seek /dev/stdin: illegal seek
 ```
 
 If you are lazy like me and don't want to implement an API that supports both `io.ReaderAt` and `io.Reader`, you can just copy `os.Stdin` to a temporary file if it's a pipe:
