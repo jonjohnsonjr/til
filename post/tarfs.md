@@ -295,7 +295,7 @@ The Y axis is in microseconds, the X axis is mostly each file being accessed, bu
 Why does it look like this?
 
 With `tarfs`, we have a single `open` syscall, then the initial scan through to generate the index takes a bunch of `read` syscalls, then "walking" the filesystem is entirely in userspace.
-Reading each individual file is also exlusively `pread` syscalls.
+Reading each individual file is also exclusively `pread` syscalls.
 You can see the overall time spent is almost evenly split between the initial scan and the subsequent accesses.
 Indexing the tar takes ~26 milliseconds, then reading all the files takes another ~17ms.
 This makes sense, because indexing has to read through every byte and parse the tar headers, whereas we are reading only the file data portions when we walk the filesystem.
