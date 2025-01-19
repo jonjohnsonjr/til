@@ -1,0 +1,36 @@
+digraph structs {
+  node [shape=Mrecord];
+  11 [label="<name> errorString |{<f0> s | \"no name\"}  "];
+  12 [label="<name> *errors.errorString"];
+  12:name -> 11:name;
+  9:<10index0> -> 12:name;
+  9 [label="<name> joinError |{<f0> errs | {<10index0> 0}}  "];
+  13 [label="<name> *errors.joinError"];
+  13:name -> 9:name;
+  14 [label="<name> *errors.errorString"];
+  14:name -> 11:name;
+  7:<8index0> -> 13:name;
+  7:<8index1> -> 14:name;
+  7 [label="<name> joinError |{<f0> errs | {<8index0> 0|<8index1> 1}}  "];
+  15 [label="<name> *errors.joinError"];
+  15:name -> 7:name;
+  16 [label="<name> *errors.errorString"];
+  16:name -> 11:name;
+  5:<6index0> -> 15:name;
+  5:<6index1> -> 16:name;
+  5 [label="<name> joinError |{<f0> errs | {<6index0> 0|<6index1> 1}}  "];
+  17 [label="<name> *errors.joinError"];
+  17:name -> 5:name;
+  18 [label="<name> *errors.errorString"];
+  18:name -> 11:name;
+  3:<4index0> -> 17:name;
+  3:<4index1> -> 18:name;
+  3 [label="<name> joinError |{<f0> errs | {<4index0> 0|<4index1> 1}}  "];
+  19 [label="<name> *errors.joinError"];
+  19:name -> 3:name;
+  20 [label="<name> *errors.errorString"];
+  20:name -> 11:name;
+  1:<2index0> -> 19:name;
+  1:<2index1> -> 20:name;
+  1 [label="<name> joinError |{<f0> errs | {<2index0> 0|<2index1> 1}}  "];
+}

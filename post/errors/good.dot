@@ -1,0 +1,23 @@
+digraph structs {
+  node [shape=Mrecord];
+  3 [label="<name> errorString |{<f0> s | \"no name\"}  "];
+  4 [label="<name> *errors.errorString"];
+  4:name -> 3:name;
+  5 [label="<name> *errors.errorString"];
+  5:name -> 3:name;
+  6 [label="<name> *errors.errorString"];
+  6:name -> 3:name;
+  7 [label="<name> *errors.errorString"];
+  7:name -> 3:name;
+  8 [label="<name> *errors.errorString"];
+  8:name -> 3:name;
+  2:<2index0> -> 4:name;
+  2:<2index1> -> 5:name;
+  2:<2index2> -> 6:name;
+  2:<2index3> -> 7:name;
+  2:<2index4> -> 8:name;
+  2 [label="<name> []error |<2index0> 0|<2index1> 1|<2index2> 2|<2index3> 3|<2index4> 4 "];
+  1 [label="<name> joinError |<f0> errs "];
+  1:f0 -> 2:name;
+}
+
