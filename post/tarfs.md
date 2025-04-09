@@ -172,7 +172,7 @@ Let's look at a different approach to the same problem.
 This is in go-containerregistry, which means I'm at least partially responsible for it, so it's fair game to disparage.
 
 Rather than untarring the entire thing to disk to give us random access, we can instead just [re-open the tar file and read through it again](https://github.com/google/go-containerregistry/blob/1b4e4078a545f2b6f96766a064b45ee77cdbefdd/pkg/v1/tarball/image.go#L221-L255) until we find what we're looking for.
-[This ends up being pretty slow](https://en.wikichip.org/wiki/schlemiel_the_painter%27s_algorithm), but it also avoid all the complexity and safety concerns of untarring it to disk.
+[This ends up being pretty slow](https://en.wikichip.org/wiki/schlemiel_the_painter%27s_algorithm), but it also avoids all the complexity and safety concerns of untarring it to disk.
 
 ## A better way
 
@@ -319,7 +319,7 @@ There are two scenarios where you might just want to use the plain tar package a
 1. You only have an `io.Reader` and not an `io.ReaderAt`, e.g. if you're streaming the tar file from a network connection.
 2. You are looking for a single entry in the tar file and are okay with exiting early.
 
-If you find yourself in the second secnario, you should be careful.
+If you find yourself in the second scenario, you should be careful.
 It is not generally correct to assume that the first matching entry in a tar file is what you want to extract because tar files may contain duplicate entries.
 
 Let me explain.
